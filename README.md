@@ -4,6 +4,6 @@ A Python information extraction library that uses a rule based approach to ident
 
 ### Dependencies:
 
-* [nltk](http://www.nltk.org/)
+* [NLTK](http://www.nltk.org/)
 * [ashlib](https://github.com/ashkonf/python-ashlib)
 * [CLiPS' Pattern](http://www.clips.ua.ac.be/pages/pattern)
