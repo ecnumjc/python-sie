@@ -10,25 +10,52 @@ import ashlib.util.str_
 import ashlib.util.list_
 import ashlib.ling.cnlp
 import ashlib.ling.trees
+import ashlib.ling.tokenize
+
+## standard parsers #######################################################################################
+
+def cnlpParser(cnlp):
+    def parser(text):
+        sentences = []
+        
+        initialSentences = ashlib.ling.tokenize(text)
+        for sentence in initialSentences:
+            subSentences, trees, coref = cnlp.parse(sentence)
+            if subSentences is not None and trees is not None:
+                for index, subSentence in enumerate(subSentences):
+                    sentences.append((subSentence, trees[index]))
+
+        return sentences
+
+    return parser
+
+def mapParser(): ## TODO: maybe not necessary
+    map = {}
+    parser = lambda text: map[text]
+    return (parser, map)
+
+## RelationExtractor #####################################################################################
 
 class RelationExtractor(object):
     
-    def __init__(self, cnlp):
-        self.cnlp = cnlp
+    def __init__(self, parser):
+        self.parser = parser
         
-    def isMentioned(self, sentence):
+    def isMentioned(self, text):
         raise NotImplementedError("Subclasses should override.")
         
-    def extract(self, sentence):
-        extraction = [] 
-        if self.isMentioned(sentence):
-            subSentences, trees, coref = self.cnlp.parse(sentence)
-            if subSentences is not None and trees is not None:
-                for tree in trees:
-                    extraction += self._extractFromTreeRecursive(tree)
+    def extract(self, text):
+        relations = []
+        if self.isMentioned(text):
+            for sentence, tree in self.parser(text):
+                relations += self._extractFromPlainText(sentence)
+                relations += self._extractFromTreeRecursive(tree)
             else:
                 print "Error anslyzing sentence: \"%s\"" % sentence
-        return extraction
+        return relations
+    
+    def _extractFromPlainText(self, sentence):
+        raise NotImplementedError("Subclasses should override.")
     
     def _extractFromTreeRecursive(self, tree):
         extraction = []
@@ -40,24 +67,26 @@ class RelationExtractor(object):
     
     def _extractFromSingleTree(self, tree):
         raise NotImplementedError("Subclasses should override.")
+
+## AggregateExtractor ####################################################################################
         
 class AggregateExtractor(RelationExtractor):
     
-    def __init__(self, cnlp):
-        super(AggregateExtractor, self).__init__(cnlp)
-        self.extractors = self.makeExtractors(cnlp)
+    def __init__(self, parser):
+        super(AggregateExtractor, self).__init__(parser)
+        self.extractors = self.makeExtractors()
     
     def makeExtractors(self):
         raise NotImplementedError("Subclasses should override.")
         
-    def isMentioned(self, sentence):
+    def isMentioned(self, text):
         for extractor in self.extractors:
-            if extractor.isMentioned(sentence):
+            if extractor.isMentioned(text):
                 return True
         return False
     
-    def extract(self, sentence):
+    def extract(self, text):
         extraction = []
         for extractor in self.extractors:
-            extraction += extractor.extract(sentence)
+            extraction += extractor.extract(text)
         return extraction

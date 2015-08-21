@@ -12,28 +12,31 @@ import base
 ## TODO: would be good to add some sample sentences that conform to these pattern as comments for clarity.
 ## TODO: These names would be ambiguous with hypernym extractors with the same patterns. Could consider changing the names to not reflect the patterns, or inserting "Hyponym" before "Extractor" in each name (although that would make them really long).
 
-## HyponymExtractor ########################################################################################
+## HyponymPatternExtractor #################################################################################
 
-class HyponymExtractor(base.RelationExtractor):
+class HyponymPatternExtractor(base.RelationExtractor):
     
-    def __init__(self, cnlp, hypernyms):
-        super(HyponymExtractor, self).__init__(cnlp)
+    def __init__(self, parser, hypernyms):
+        super(HyponymExtractor, self).__init__(parser)
         self.hypernyms = hypernyms
     
-    def isMentioned(self, sentence):
+    def isMentioned(self, text):
         for synonym in self.hypernyms:
-            if synonym in sentence:
+            if synonym in text:
                 return True
         return False
 
 ## HyponymIsHypernymExtractor ##############################################################################
     
-class HyponymIsHypernymExtractor(HyponymExtractor):
+class HyponymIsHypernymExtractor(HyponymPatternExtractor):
     
     ## TODO: expand isMentioned and _extractFromSingleTree to look for tenses of "to be" besides just "is". Phrasal conjugations may require reworking the code a little to add phrasal support.
     
-    def isMentioned(self, sentence):
-        return super(IsHypernymExtractor, self).isMentioned(sentence) and "is" in sentence
+    def isMentioned(self, text):
+        return super(IsHypernymExtractor, self).isMentioned(text) and "is" in text
+    
+    def _extractFromPlainText(self, sentence):
+        return []
     
     def _extractFromSingleTree(self, tree):
         extraction = []
@@ -68,19 +71,23 @@ class HyponymIsHypernymExtractor(HyponymExtractor):
 
 ## HypernymNamedHyponymExtractor ###########################################################################
 
-class HypernymNamedHyponymExtractor(HyponymExtractor):
+class HypernymNamedHyponymExtractor(HyponymPatternExtractor):
     
-    def isMentioned(self, sentence):
-        if not super(HypernymNamedExtractor, self).isMentioned(sentence):
+    def namedSynonyms(self):
+        ## TODO: extend (potentially to phrases like "is known as") that may require reworking the code to work with phrases.
+        return ["called", "named", "titled", "denominated", "dubbed", "entitled", "labeled",
+                "designated", "termed"]
+    
+    def isMentioned(self, text):
+        if not super(HypernymNamedExtractor, self).isMentioned(text):
             return False
         for synonym in self.namedSynonyms():
-            if synonym in sentence:
+            if synonym in text:
                 return True
         return False
     
-    def namedSynonyms(self):
-        return ["called", "named", "titled", "denominated", "dubbed", "entitled", "labeled", 
-                "designated", "termed"] ## TODO: extend (potentially to phrases like "is known as") that may require reworking the code to work with phrases.
+    def _extractFromPlainText(self, sentence):
+        return []
     
     def _extractFromSingleTree(self, tree):
         extraction = []
@@ -114,7 +121,10 @@ class HypernymNamedHyponymExtractor(HyponymExtractor):
 
 ## HyponymCommaHypernymExtractor ###########################################################################
     
-class HyponymCommaHypernymExtractor(HyponymExtractor):
+class HyponymCommaHypernymExtractor(HyponymPatternExtractor):
+    
+    def _extractFromPlainText(self, sentence):
+        return []
     
     def _extractFromSingleTree(self, tree):
         extraction = []
@@ -148,7 +158,10 @@ class HyponymCommaHypernymExtractor(HyponymExtractor):
 
 ## HypernymCommaHyponymExtractor ###########################################################################
     
-class HypernymCommaHyponymExtractor(HyponymExtractor):
+class HypernymCommaHyponymExtractor(HyponymPatternExtractor):
+    
+    def _extractFromPlainText(self, sentence):
+        return []
     
     def _extractFromSingleTree(self, tree):
         extraction = []
@@ -171,3 +184,17 @@ class HypernymCommaHyponymExtractor(HyponymExtractor):
                     extraction.append(thirdSubTree)
         
         return extraction
+
+## HyponymExtractor ########################################################################################
+
+class HyponymExtractor(base.AggregateExtractor):
+
+    def __init__(self, parser, hypernyms):
+        self.hypernyms = hypernyms
+        super(HyponymExtractor, self).__init__(parser)
+        
+    def makeExtractors(self):
+        [sie.hypernyms.HyponymIsHypernymExtractor(self.parser, self.hypernyms),
+         sie.hypernyms.HypernymNamedHyponymExtractor(self.parser, self.hypernyms),
+         sie.hypernyms.HyponymCommaHypernymExtractor(self.parser, self.hypernyms),
+         sie.hypernyms.HypernymCommaHyponymExtractor(self.parser, self.hypernyms)]
