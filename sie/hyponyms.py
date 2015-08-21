@@ -17,7 +17,7 @@ import base
 class HyponymPatternExtractor(base.RelationExtractor):
     
     def __init__(self, parser, hypernyms):
-        super(HyponymExtractor, self).__init__(parser)
+        super(HyponymPatternExtractor, self).__init__(parser)
         self.hypernyms = hypernyms
     
     def isMentioned(self, text):
@@ -33,13 +33,13 @@ class HyponymIsHypernymExtractor(HyponymPatternExtractor):
     ## TODO: expand isMentioned and _extractFromSingleTree to look for tenses of "to be" besides just "is". Phrasal conjugations may require reworking the code a little to add phrasal support.
     
     def isMentioned(self, text):
-        return super(IsHypernymExtractor, self).isMentioned(text) and "is" in text
+        return super(HyponymIsHypernymExtractor, self).isMentioned(text) and "is" in text
     
     def _extractFromPlainText(self, sentence):
         return []
     
     def _extractFromSingleTree(self, tree):
-        extraction = []
+        relations = []
         
         def indicatesHyponym(tree):
             nounPhrase = ashlib.ling.trees.toString(ashlib.ling.trees.prune(tree, 1))
@@ -65,9 +65,9 @@ class HyponymIsHypernymExtractor(HyponymPatternExtractor):
                 if len(nextSubtree) >= 2:
                     if ashlib.ling.trees.wordMatches(nextSubtree[0], "is"): ## TODO: later could add in other tenses of to be
                         if indicatesHyponym(nextSubtree[1]):
-                            extraction.append(subTree) ## TODO: consider just returnign the tree for later analysis
+                            relations.append(subTree) ## TODO: consider just returnign the tree for later analysis
                             
-        return extraction
+        return relations
 
 ## HypernymNamedHyponymExtractor ###########################################################################
 
@@ -79,7 +79,7 @@ class HypernymNamedHyponymExtractor(HyponymPatternExtractor):
                 "designated", "termed"]
     
     def isMentioned(self, text):
-        if not super(HypernymNamedExtractor, self).isMentioned(text):
+        if not super(HypernymNamedHyponymExtractor, self).isMentioned(text):
             return False
         for synonym in self.namedSynonyms():
             if synonym in text:
@@ -90,7 +90,7 @@ class HypernymNamedHyponymExtractor(HyponymPatternExtractor):
         return []
     
     def _extractFromSingleTree(self, tree):
-        extraction = []
+        relations = []
         
         def isNamedSynonym(tree):
             for synonym in self.namedSynonyms():
@@ -115,9 +115,9 @@ class HypernymNamedHyponymExtractor(HyponymPatternExtractor):
                 if ashlib.ling.trees.posMatches(nextSubtree, "VP"):
                     if len(nextSubtree) >= 2:
                         if isNamedSynonym(nextSubtree[0]):
-                            extraction.append(nextSubtree[1])
+                            relations.append(nextSubtree[1])
                     
-        return extraction
+        return relations
 
 ## HyponymCommaHypernymExtractor ###########################################################################
     
@@ -127,7 +127,7 @@ class HyponymCommaHypernymExtractor(HyponymPatternExtractor):
         return []
     
     def _extractFromSingleTree(self, tree):
-        extraction = []
+        relations = []
         
         def indicatesHyponym(tree):
             if ashlib.ling.trees.posMatches(tree, lambda tag: tag == "NP" or tag == "S"):
@@ -152,9 +152,9 @@ class HyponymCommaHypernymExtractor(HyponymPatternExtractor):
             
             if ashlib.ling.trees.wordMatches(secondSubStree, ","):
                 if indicatesHyponymRecursive(thirdSubTree):
-                    extraction.append(firstSubTree)
+                    relations.append(firstSubTree)
         
-        return extraction
+        return relations
 
 ## HypernymCommaHyponymExtractor ###########################################################################
     
@@ -164,7 +164,7 @@ class HypernymCommaHyponymExtractor(HyponymPatternExtractor):
         return []
     
     def _extractFromSingleTree(self, tree):
-        extraction = []
+        relations = []
         
         def indicatesHyponym(tree):
             if ashlib.ling.trees.posMatches(tree, lambda tag: tag == "NP" or tag == "S"):
@@ -181,9 +181,9 @@ class HypernymCommaHyponymExtractor(HyponymPatternExtractor):
             
             if ashlib.ling.trees.wordMatches(secondSubStree, ","):
                 if indicatesHyponym(firstSubTree):
-                    extraction.append(thirdSubTree)
+                    relations.append(thirdSubTree)
         
-        return extraction
+        return relations
 
 ## HyponymExtractor ########################################################################################
 

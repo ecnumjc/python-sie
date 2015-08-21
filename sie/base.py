@@ -58,12 +58,12 @@ class RelationExtractor(object):
         raise NotImplementedError("Subclasses should override.")
     
     def _extractFromTreeRecursive(self, tree):
-        extraction = []
+        relations = []
         if isinstance(tree, nltk.tree.Tree):
-            extraction += self._extractFromSingleTree(tree)
+            relations += self._extractFromSingleTree(tree)
             for subTree in tree:
-                extraction += self._extractFromTreeRecursive(subTree)
-        return extraction
+                relations += self._extractFromTreeRecursive(subTree)
+        return relations
     
     def _extractFromSingleTree(self, tree):
         raise NotImplementedError("Subclasses should override.")
@@ -86,7 +86,7 @@ class AggregateExtractor(RelationExtractor):
         return False
     
     def extract(self, text):
-        extraction = []
+        relations = []
         for extractor in self.extractors:
-            extraction += extractor.extract(text)
-        return extraction
+            relations += extractor.extract(text)
+        return relations
